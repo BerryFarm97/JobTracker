@@ -62,13 +62,55 @@ def view_applications(stored_apps):
         print("----------------------------")
         print(f"Company: {app['company_name'].title()}")
         print(f"  Job Title: {app['job_title'].title()}")
-        print(f"  Salary Range: {app['salary_range'].title()}")
+        print(f"  Salary Range: {app['salary_range']}")
         print(f"  Location: {app['location'].title()}")
         print(f"  Date Applied: {app['date'].title()}")
         print(f"  Status: {app['status'].title()}")
-        print(f"  Notes:{app['notes'].title()}")
+        print(f"  Notes: {app['notes'].title()}")
         print("----------------------------")
         time.sleep(1)
+
+def update_application_status(stored_apps):
+    update_options = [
+        "Applied",
+        "Interviewing",
+        "Offer",
+        "Rejected",
+        "Ghosted",
+        "Withdrawn"
+    ]
+    while True:
+        try:
+            for num, app in enumerate(stored_apps, start=1):
+                print(f"{num} {app['company_name']} - {app['job_title']} - {app['status']}")
+            app_to_update = int(input("Which application status would you like to update?: "))
+            if 0 < app_to_update <= len(stored_apps):
+                selected_app = stored_apps[app_to_update - 1]
+                break
+            else:
+                print("Not a valid option. Please try again.")
+                continue
+        except ValueError:
+            print("Not a valid option. Please try again.")
+            continue
+    while True:
+        try:
+            for pos, option in enumerate(update_options, start=1):
+                print(f"{pos}. {option}")
+            new_status = int(input("What is the new status?: "))
+            if 0 < new_status <= len(update_options):
+                selected_status = update_options[new_status - 1]
+                selected_app["status"] = selected_status
+                print(f"Successfully updated {selected_app['company_name']} application status")
+                break
+            else:
+                print("Not a valid option. Please try again.")
+                continue
+        except ValueError:
+            print("Not a valid option. Please try again.")
+            continue
+
+
 
 def main():
     stored_applications = []
@@ -88,6 +130,13 @@ def main():
                 continue
             else:
                 view_applications(stored_applications)
+        elif selection == 3:
+            if not stored_applications:
+                print("Nothing to update yet.")
+                time.sleep(.5)
+                continue
+            else:
+                update_application_status(stored_applications)
 
         elif selection == 5:
             break
