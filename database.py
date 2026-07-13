@@ -22,10 +22,19 @@ def initialize_database():
     conn.close()
 
 
-def add_application(application):
+def initialize_conn():
     conn = sqlite3.connect("job_tracker.db")
+    return conn
 
-    cur = conn.cursor()
+
+def initialize_cur(conn):
+    return conn.cursor()
+
+
+def add_application(application):
+    conn = initialize_conn()
+
+    cur = initialize_cur(conn)
 
     cur.execute("""INSERT INTO applications
     (company_name, job_title, salary_range, location, notes, status, application_date, archived)
@@ -48,14 +57,27 @@ def add_application(application):
     conn.close()
 
 
-def get_active_applications():
-    conn = sqlite3.connect("job_tracker.db")
-
+def get_active_applications(sort_choice):
+    conn = initialize_conn()
     conn.row_factory = sqlite3.Row
 
-    cur = conn.cursor()
+    cur = initialize_cur(conn)
 
-    cur.execute("""SELECT * FROM applications WHERE archived = 0""")
+
+    sort_options = {
+        "Newest": 'application_date DESC',
+        "Oldest": 'application_date ASC',
+        "Company Name": 'company_name ASC',
+        "Application Status": 'status ASC'
+    }
+
+    order_by = sort_options[sort_choice]
+
+    cur.execute(f"""SELECT * 
+                FROM applications 
+                WHERE archived = 0
+                ORDER BY {order_by}"""
+            )
     applications = cur.fetchall()
 
     conn.close()
@@ -64,9 +86,9 @@ def get_active_applications():
 
 
 def update_status(application_id, new_status):
-    conn = sqlite3.connect("job_tracker.db")
+    conn = initialize_conn()
 
-    cur = conn.cursor()
+    cur = initialize_cur(conn)
 
     cur.execute(
         """UPDATE applications
@@ -80,9 +102,9 @@ def update_status(application_id, new_status):
 
 
 def archived_status(application_id):
-    conn = sqlite3.connect("job_tracker.db")
-    
-    cur = conn.cursor()
+    conn = initialize_conn()
+
+    cur = initialize_cur(conn)
 
     cur.execute(
         """UPDATE applications
@@ -95,14 +117,26 @@ def archived_status(application_id):
     conn.close()
 
 
-def get_archived():
-    conn = sqlite3.connect("job_tracker.db")
-
+def get_archived(sort_choice):
+    conn = initialize_conn()
     conn.row_factory = sqlite3.Row
 
-    cur = conn.cursor()
+    cur = initialize_cur(conn)
 
-    cur.execute("""SELECT * FROM applications WHERE archived = 1""")
+    sort_options = {
+        "Newest": 'application_date DESC',
+        "Oldest": 'application_date ASC',
+        "Company Name": 'company_name ASC',
+        "Application Status": 'status ASC'
+    }
+
+    order_by = sort_options[sort_choice]
+
+    cur.execute(f"""SELECT * 
+                FROM applications 
+                WHERE archived = 1
+                ORDER BY {order_by}"""
+            )
     applications = cur.fetchall()
 
     conn.close()
@@ -110,9 +144,9 @@ def get_archived():
 
 
 def change_archive_status(application_id):
-    conn = sqlite3.connect("job_tracker.db")
+    conn = initialize_conn()
 
-    cur = conn.cursor()
+    cur = initialize_cur(conn)
 
     cur.execute(
         """UPDATE applications
@@ -123,3 +157,67 @@ def change_archive_status(application_id):
 
     conn.commit()
     conn.close()
+
+
+def return_filtered_apps(status, sort_choice):
+    conn = initialize_conn()
+    conn.row_factory = sqlite3.Row
+
+    cur = initialize_cur(conn)
+
+    sort_options = {
+        "Newest": 'application_date DESC',
+        "Oldest": 'application_date ASC',
+        "Company Name": 'company_name ASC',
+        "Application Status": 'status ASC'
+    }
+
+    order_by = sort_options[sort_choice]
+
+    cur.execute(f"""SELECT * 
+                FROM applications 
+                WHERE archived = 0 
+                AND 
+                status = ?
+                ORDER BY {order_by}""",
+                (status,)
+    )
+    filtered_apps = cur.fetchall()
+
+    conn.close()
+    return filtered_apps
+
+
+def get_search_results(keyword, sort_choice):
+    conn = initialize_conn()
+    conn.row_factory = sqlite3.Row
+
+    cur = initialize_cur(conn)
+
+    sort_options = {
+        "Newest": 'application_date DESC',
+        "Oldest": 'application_date ASC',
+        "Company Name": 'company_name ASC',
+        "Application Status": 'status ASC'
+    }
+
+    order_by = sort_options[sort_choice]
+
+    search_pattern = f"%{keyword}%"
+
+    cur.execute(f"""SELECT * 
+                FROM applications
+                WHERE archived = 0 
+                AND (
+                company_name LIKE ?
+                OR job_title LIKE ?
+                OR salary_range LIKE ?
+                OR location LIKE ?
+                OR notes LIKE ?)
+                ORDER BY {order_by}""",
+                (search_pattern, search_pattern, search_pattern, search_pattern, search_pattern)
+    )
+    search_results = cur.fetchall()
+
+    conn.close()
+    return search_results

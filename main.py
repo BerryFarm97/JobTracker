@@ -1,6 +1,6 @@
 from datetime import date
 import time
-from database import initialize_database, add_application, get_active_applications, update_status, archived_status, get_archived, change_archive_status
+from database import initialize_database, add_application, get_active_applications, update_status, archived_status, get_archived, change_archive_status, return_filtered_apps, get_search_results
 
 
 #This project should keep track of jobs I have applied to.
@@ -24,6 +24,8 @@ def get_menu_choice():
         "Update Application",
         "Archive Application",
         "View Archived Applications",
+        "Filter Applications By Status",
+        "Search for applications",
         "Exit"
     ]
     for num, option in enumerate(menu_options, start=1):
@@ -38,6 +40,7 @@ def get_menu_choice():
         print("Invalid selection. Please try again.")
         time.sleep(.5)
         return None
+
 
 def create_application():
     company_name = input("Company name: ")
@@ -60,8 +63,10 @@ def create_application():
 
     return application
 
+
 def view_applications():
-    stored_apps = get_active_applications()
+    sort_choice = get_sorting_choice()
+    stored_apps = get_active_applications(sort_choice)
     if not stored_apps:
         print("Nothing to view yet.")
         return
@@ -87,8 +92,8 @@ def update_application_status():
         "Ghosted",
         "Withdrawn"
     ]
-
-    stored_apps = get_active_applications()
+    sort_choice = get_sorting_choice()
+    stored_apps = get_active_applications(sort_choice)
 
     while True:
         try:
@@ -126,8 +131,10 @@ def update_application_status():
             print("Not a valid option. Please try again.")
             continue
 
+
 def archive_application():
-    stored_apps = get_active_applications()
+    sort_choice = get_sorting_choice()
+    stored_apps = get_active_applications(sort_choice)
     if not stored_apps:
             print("Nothing to archive yet.")
             return
@@ -149,7 +156,8 @@ def archive_application():
 
 
 def view_archived_apps():
-    archived_apps = get_archived()
+    sort_choice = get_sorting_choice()
+    archived_apps = get_archived(sort_choice)
     if not archived_apps:
         print("Nothing to view yet.")
         return
@@ -179,6 +187,124 @@ def view_archived_apps():
             continue
         
 
+def view_filtered_apps():
+    status_options = [
+        "Applied",
+        "Interviewing",
+        "Offer",
+        "Rejected",
+        "Ghosted",
+        "Withdrawn"
+    ]
+    for num, status in enumerate(status_options, start=1):
+        print(f"{num}. {status}")
+    while True:
+        try:
+            choice = int(input("What application status are you looking for?: "))
+            if 0 < choice <= len(status_options):
+                status_choice = status_options[choice - 1]
+                sort_choice = get_sorting_choice()
+                filtered_list = return_filtered_apps(status_choice, sort_choice)
+
+                if not filtered_list:
+                    print(f"No active applications with the status: {status_choice}")
+                    return
+                for num, app in enumerate(filtered_list, start=1):
+                    print(f"{num}. {app['company_name']} | {app['job_title']} | {app['salary_range']} | {app['application_date']} | {app['notes']} | {app['status']}")
+                return
+            else:
+                print("Invalid option. Please try again.")
+                
+        except ValueError:
+            print("Invalid option. Please try again.")
+
+
+def search_for_applications():
+    searching = True
+    while searching:
+        phrase = input("Please enter a keyword or phrase to search: ").strip().lower()
+        if not phrase:
+            print("Please enter at least one character.")
+            continue
+        
+        sort_choice = get_sorting_choice()
+        results = get_search_results(phrase, sort_choice)
+        if not results:
+            print("No applications matched that search")
+            
+        
+        for num, result in enumerate(results, start=1):
+            print(
+                f"{num}. Company name: {result['company_name'].title()} | "
+                f"Job Title: {result['job_title'].title()} | Salary Range: {result['salary_range']} | "
+                f"Application Date: {result['application_date']} | Notes: {result['notes']} | "
+                f"Application Status: {result['status'].title()}"
+            )
+        
+        while True:
+            search_again = input("Would you like to make another search?(y/n): ").strip().lower()
+            if search_again in ('y', 'yes'):
+                break
+
+            elif search_again in ('n', 'no'):
+                searching = False
+                break
+
+            else:
+                print("Invalid option. Please try again.")
+                continue  
+
+
+def get_sorting_choice():
+    sorting_options = [
+        'Newest',
+        'Oldest',
+        'Company Name',
+        'Application Status'
+    ]
+    while True:
+        for num, option in enumerate(sorting_options, start=1):
+            print(f"{num}. {option}")
+        try:
+            sort_choice = int(input("How would you like to sort them?: "))
+            if 0 < sort_choice <= len(sorting_options):
+                selected_choice = sorting_options[sort_choice - 1]
+                return selected_choice
+            else:
+                print("Invalid option. Please try again.")
+        except ValueError:
+            print("Invalid option. Please try again.")
+
+
+def edit_application():
+    editable_options = [
+        'Company Name',
+        'Job Title',
+        'Salary Range',
+        'Location',
+        'Notes'
+    ]
+    
+    while True:
+        try:
+            sort_choice = get_sorting_choice()
+            stored_apps = get_active_applications(sort_choice)
+            if not stored_apps:
+                print("Nothing to update yet.")
+                return
+            #print all apps and asking user which one they want to edit.
+            #then after getting the app to edit ask the user what they want to change on THAT application
+            #Ask the user for the new value of that choice
+            #return that new value to SQL and update the table with the new value
+            #print a success statment
+            #Ask the user if they would like to edit another part of that same app
+            #if yes then ask then again what they want to change etc...
+            #if no ask the user if they want to edit another app
+            #if yes re-start the whole function
+            #if no return to the main menu
+        except ValueError:
+            print("Invalid option. Please try again.")
+
 
 def main():
     initialize_database()
@@ -206,6 +332,12 @@ def main():
             view_archived_apps()
 
         elif selection == 6:
+            view_filtered_apps()
+        
+        elif selection == 7:
+            search_for_applications()
+
+        elif selection == 8:
             break
 
 
