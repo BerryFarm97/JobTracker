@@ -1,5 +1,6 @@
 from datetime import date
 import time
+from database import initialize_database, add_application, get_active_applications, update_status, archived_status, get_archived, change_archive_status
 
 
 #This project should keep track of jobs I have applied to.
@@ -22,13 +23,14 @@ def get_menu_choice():
         "View Applications",
         "Update Application",
         "Archive Application",
+        "View Archived Applications",
         "Exit"
     ]
     for num, option in enumerate(menu_options, start=1):
         print(f"{num}. {option}")
     try:
         choice = int(input("What would you like to do?: "))
-        if 0 < choice < 6:
+        if 0 < choice <= len(menu_options):
             return choice
         else:
             print("Invalid entry. Please try again")
@@ -50,36 +52,33 @@ def create_application():
         "job_title": job_title,
         "salary_range": salary_range,
         "location": location,
-        "date": str(date.today()),
+        "application_date": str(date.today()),
         "notes": notes,
         "status": status,
-        "archived": False
+        "archived": 0
     }
 
     return application
 
-def view_applications(stored_apps):
-    active_apps = []
-    for active in stored_apps:
-        if not active['archived']:
-            active_apps.append(active)
-    if not active_apps:
+def view_applications():
+    stored_apps = get_active_applications()
+    if not stored_apps:
         print("Nothing to view yet.")
         return
-    else:
-        for app in active_apps:
-            print("----------------------------")
-            print(f"Company: {app['company_name'].title()}")
-            print(f"  Job Title: {app['job_title'].title()}")
-            print(f"  Salary Range: {app['salary_range']}")
-            print(f"  Location: {app['location'].title()}")
-            print(f"  Date Applied: {app['date'].title()}")
-            print(f"  Status: {app['status'].title()}")
-            print(f"  Notes: {app['notes'].title()}")
-            print("----------------------------")
+    
+    for app in stored_apps:
+        print("----------------------------")
+        print(f"Company: {app['company_name'].title()}")
+        print(f"  Job Title: {app['job_title'].title()}")
+        print(f"  Salary Range: {app['salary_range']}")
+        print(f"  Location: {app['location'].title()}")
+        print(f"  Date Applied: {app['application_date'].title()}")
+        print(f"  Status: {app['status'].title()}")
+        print(f"  Notes: {app['notes'].title()}")
+        print("----------------------------")
 
 
-def update_application_status(stored_apps):
+def update_application_status():
     update_options = [
         "Applied",
         "Interviewing",
@@ -89,21 +88,20 @@ def update_application_status(stored_apps):
         "Withdrawn"
     ]
 
+    stored_apps = get_active_applications()
+
     while True:
-        active_apps = []
         try:
-            for active in stored_apps:
-                if not active['archived']:
-                    active_apps.append(active)
-            if not active_apps:
+           
+            if not stored_apps:
                 print("Nothing to update yet.")
                 return
             else:
-                for num, app in enumerate(active_apps, start=1):
+                for num, app in enumerate(stored_apps, start=1):
                     print(f"{num} {app['company_name']} - {app['job_title']} - {app['status']}")
                 app_to_update = int(input("Which application status would you like to update?: "))
-                if 0 < app_to_update <= len(active_apps):
-                    selected_app = active_apps[app_to_update - 1]
+                if 0 < app_to_update <= len(stored_apps):
+                    selected_app = stored_apps[app_to_update - 1]
                     break
                 else:
                     print("Not a valid option. Please try again.")
@@ -118,7 +116,7 @@ def update_application_status(stored_apps):
             new_status = int(input("What is the new status?: "))
             if 0 < new_status <= len(update_options):
                 selected_status = update_options[new_status - 1]
-                selected_app["status"] = selected_status
+                update_status(selected_app["id"], selected_status)
                 print(f"Successfully updated {selected_app['company_name']} application status")
                 break
             else:
@@ -128,69 +126,86 @@ def update_application_status(stored_apps):
             print("Not a valid option. Please try again.")
             continue
 
-def archive_application(stored_apps):
+def archive_application():
+    stored_apps = get_active_applications()
+    if not stored_apps:
+            print("Nothing to archive yet.")
+            return
     while True:
-        active_apps = []
         try:
-            for active in stored_apps:
-                if not active['archived']:
-                    active_apps.append(active)
-            if not active_apps:
-                print("Nothing to archive yet.")
-                return
+            for num, app in enumerate(stored_apps, start=1):
+                    print(f"{num}. {app['company_name']} - {app['job_title']} - {app['status']}")
+            choice = int(input("Which application would you like to archive?: "))
+            if 0 < choice <= len(stored_apps):
+                app_to_archive = stored_apps[choice - 1]
+                archived_status(app_to_archive["id"])
+                print(f"Success! {app_to_archive['company_name']} has been archived")
+                break
             else:
-                for num, app in enumerate(active_apps, start=1):
-                        print(f"{num}. {app['company_name']} - {app['job_title']} - {app['status']}")
-                choice = int(input("Which application would you like to archive?: "))
-                if 0 < choice <= len(active_apps):
-                    app_to_archive = active_apps[choice - 1]
-                    app_to_archive['archived'] = True
-                    print(f"Success! {app_to_archive['company_name']} has been archived")
-                    break
-                else:
-                    print("Not a valid option. Please try again")
+                print("Not a valid option. Please try again")
         except ValueError:
             print("Not a valid option. Please try again.")
             continue
 
 
+def view_archived_apps():
+    archived_apps = get_archived()
+    if not archived_apps:
+        print("Nothing to view yet.")
+        return
+
+    for num, app in enumerate(archived_apps, start=1):
+        print(f"{num}. {app['company_name']} | {app['job_title']} | {app['status']}\n")
+    while True:
+        choice = input("Would you like to re-add a archived application?(y/n): ").strip().lower()
+        try:
+            if choice in ('y', 'yes'):
+                chose_app = int(input("Which app do you want to change?: "))
+                if 0 < chose_app <= len(archived_apps):
+                    app_to_restore = archived_apps[chose_app - 1]
+                    change_archive_status(app_to_restore['id'])
+                    print(f"Successfully restored your {app_to_restore['company_name']} application!")
+                    return
+                else:
+                    print("Invalid option. Please try again")
+
+            elif choice in ('n', 'no'):
+                return
+            else:
+                print("Invalid option. Please try again.")
+                continue
+        except ValueError:
+            print("Invalid option. Please try again.")
+            continue
+        
+
 
 def main():
-    stored_applications = []
-    while True:
+    initialize_database()
 
+    while True:
+        
         selection = get_menu_choice()
         if not selection:
             continue
 
         elif selection == 1:
             new_application = create_application()
-            stored_applications.append(new_application)
-
+            add_application(new_application)
+        
         elif selection == 2:
-            if not stored_applications:
-                print("Nothing to view yet")
-                time.sleep(.5)
-                continue
-            else:
-                view_applications(stored_applications)
+                view_applications()
 
         elif selection == 3:
-            if not stored_applications:
-                print("Nothing to update yet.")
-                time.sleep(.5)
-                continue
-            else:
-                update_application_status(stored_applications)
+            update_application_status()
 
         elif selection == 4:
-            if not stored_applications:
-                print("Nothing to archive yet.")
-                continue
-            else:
-                archive_application(stored_applications)
-
+                archive_application()
+        
         elif selection == 5:
+            view_archived_apps()
+
+        elif selection == 6:
             break
 
 
