@@ -95,6 +95,32 @@ def view_applications():
         print("----------------------------")
 
 
+def update_applications():
+    changeable_params = [
+        "Application Details",
+        "Application Status"
+    ]
+    while True:
+        for num, param in enumerate(changeable_params, start=1):
+            print(f"{num}. {param}")
+        try:
+            choice = int(input("Which would you like to update?: ")) 
+                
+            if 0 < choice <= len(changeable_params):
+                if choice == 1:
+                    edit_application()
+                    break
+                elif choice == 2:
+                    update_application_status()
+                    break
+            else:
+                print("Please enter a number. Try again.")
+                continue
+        except ValueError:
+            print("Please only enter numbers. Try again.")
+            continue
+        
+        
 def update_application_status():
     update_options = [
         "Applied",
@@ -148,6 +174,116 @@ def update_application_status():
         except ValueError:
             print("Not a valid option. Please try again.")
             continue
+
+def edit_application():
+    editing = True
+
+    editable_options = {
+        "Company Name": "company_name",
+        "Job Title": "job_title",
+        "Salary Range": "salary_range",
+        "Location": "location",
+        "Notes": "notes",
+    }
+
+    editable_keys = list(editable_options.keys())
+    while editing:
+        sort_choice = get_sorting_choice()
+        stored_apps = get_active_applications(sort_choice)
+
+        if not stored_apps:
+            print("Nothing to update yet.")
+            return
+        for num, app in enumerate(stored_apps, start=1):
+            print(
+                f"{num}. Company name: {app['company_name'].title()} | "
+                f"Job Title: {app['job_title'].title()} | Salary Range: {app['salary_range']} | "
+                f"Application Date: {app['application_date']} | "
+                f"Application Status: {app['status'].title()}"
+            )
+        while True:
+            try:
+                app_edit = int(input("Which app would you like to edit?: "))
+
+                if 0 < app_edit <= len(stored_apps):
+                    app_selected = stored_apps[app_edit - 1]
+                    break
+                else:
+                    print("Invalid option. Please try again.")
+            except ValueError:
+                print("Invalid option. Please try again.")
+
+
+        edit_helper(editable_keys, editable_options, app_selected)
+
+
+        while True:
+            edit_another = (
+                input("Would you like to edit another application?(y/n): ")
+                .strip()
+                .lower()
+            )
+
+            if edit_another in ("y", "yes"):
+                break
+            elif edit_another in ("n", "no"):
+                print("Returning to main menu.")
+                time.sleep(2)
+                editing = False
+                break
+            else:
+                print("Please enter y or n.")
+
+
+def edit_helper(editable_keys, editable_options, app_selected):
+    while True:
+        for num, editable_key in enumerate(editable_keys, start=1):
+            print(f"{num}. {editable_key}")
+        try:
+            user_choice = int(input("What would you like to change?: "))
+
+            if 0 < user_choice <= len(editable_keys):
+                selected_key = editable_keys[user_choice - 1]
+                selected_column = editable_options[selected_key]
+            else:
+                print("Invalid option. Please try again.")
+                continue
+        except ValueError:
+            print("Please enter a number.")
+            continue
+
+        while True:
+            application_value = input("What is the updated info?: ").strip()
+            if selected_column != "notes":
+                if len(application_value) == 0:
+                    print("This field cannot be empty. Please try again")
+                    continue
+            break
+
+        updated_database = edit_application_values(
+            app_selected["id"], selected_column, application_value
+        )
+        if not updated_database:
+            print("Unable to complete request. Please check the values and try again")
+            break
+        elif updated_database:
+            print("Successfully applied changes")
+
+        while True:
+            edit_same = (
+                input(
+                    "Would you like to make another change on this application?(y/n): "
+                )
+                .strip()
+                .lower()
+            )
+
+            if edit_same in ("y", "yes"):
+                break
+            elif edit_same in ("n", "no"):
+                return
+            else:
+                print("Please enter y or n.")
 
 
 def archive_application():
@@ -300,154 +436,6 @@ def get_sorting_choice():
             print("Invalid option. Please try again.")
 
 
-def edit_application():
-    editing = True
-
-    editable_options = {
-        "Company Name": "company_name",
-        "Job Title": "job_title",
-        "Salary Range": "salary_range",
-        "Location": "location",
-        "Notes": "notes",
-    }
-
-    editable_keys = list(editable_options.keys())
-    while editing:
-        sort_choice = get_sorting_choice()
-        stored_apps = get_active_applications(sort_choice)
-
-        if not stored_apps:
-            print("Nothing to update yet.")
-            return
-        for num, app in enumerate(stored_apps, start=1):
-            print(
-                f"{num}. Company name: {app['company_name'].title()} | "
-                f"Job Title: {app['job_title'].title()} | Salary Range: {app['salary_range']} | "
-                f"Application Date: {app['application_date']} | "
-                f"Application Status: {app['status'].title()}"
-            )
-        while True:
-            try:
-                app_edit = int(input("Which app would you like to edit?: "))
-
-                if 0 < app_edit <= len(stored_apps):
-                    app_selected = stored_apps[app_edit - 1]
-                    break
-                else:
-                    print("Invalid option. Please try again.")
-            except ValueError:
-                print("Invalid option. Please try again.")
-
-        # for num, editable_key in enumerate(editable_keys, start=1):
-        #     print(f"{num}. {editable_key}")
-        # while True:
-        #     try:
-        #         user_choice = int(input("What would you like to change?: "))
-
-        #         if 0 < user_choice <= len(editable_keys):
-        #             selected_key = editable_keys[user_choice - 1]
-        #             selected_column = editable_options[selected_key]
-        #             break
-        #         else:
-        #             print("Invalid option. Please try again.")
-
-        #     except ValueError:
-        #         print("Please enter a number.")
-
-        edit_helper(editable_keys, editable_options, app_selected)
-
-        # while True:
-        #     application_value = input("What is the updated info?: ").strip()
-        #     if selected_column != 'notes':
-        #         if len(application_value) == 0:
-        #             print("This field cannot be empty. Please try again")
-        #             continue
-        #     break
-        # updated_application_value = application_value
-        # updated_database = edit_application_values(app_selected['id'], selected_column, updated_application_value)
-        # if not updated_database:
-        #         print("Unable to complete request. Please check the values and try again")
-        #         break
-
-        # while True:
-        #     edit_same = input("Would you like to make another change on this application?(y/n): ").strip().lower()
-
-        #     if edit_same in ('y', 'yes'):
-        #         edit_ask_again_helper(editable_keys, editable_options)
-        #     elif edit_same in ('n', 'no'):
-        #         break
-        #     else:
-        #         print("Please enter y or n.")
-
-        while True:
-            edit_another = (
-                input("Would you like to edit another application?(y/n): ")
-                .strip()
-                .lower()
-            )
-
-            if edit_another in ("y", "yes"):
-                break
-            elif edit_another in ("n", "no"):
-                print("Returning to main menu.")
-                time.sleep(2)
-                editing = False
-                break
-            else:
-                print("Please enter y or n.")
-
-
-def edit_helper(editable_keys, editable_options, app_selected):
-    while True:
-        for num, editable_key in enumerate(editable_keys, start=1):
-            print(f"{num}. {editable_key}")
-        try:
-            user_choice = int(input("What would you like to change?: "))
-
-            if 0 < user_choice <= len(editable_keys):
-                selected_key = editable_keys[user_choice - 1]
-                selected_column = editable_options[selected_key]
-            else:
-                print("Invalid option. Please try again.")
-                continue
-        except ValueError:
-            print("Please enter a number.")
-            continue
-
-        while True:
-            application_value = input("What is the updated info?: ").strip()
-            if selected_column != "notes":
-                if len(application_value) == 0:
-                    print("This field cannot be empty. Please try again")
-                    continue
-            break
-
-        updated_database = edit_application_values(
-            app_selected["id"], selected_column, application_value
-        )
-        if not updated_database:
-            print("Unable to complete request. Please check the values and try again")
-            break
-        elif updated_database:
-            print("Successfully applied changes")
-
-        while True:
-            edit_same = (
-                input(
-                    "Would you like to make another change on this application?(y/n): "
-                )
-                .strip()
-                .lower()
-            )
-
-            if edit_same in ("y", "yes"):
-                break
-            elif edit_same in ("n", "no"):
-                return
-            else:
-                print("Please enter y or n.")
-
-
 def main():
     initialize_database()
 
@@ -465,7 +453,7 @@ def main():
             view_applications()
 
         elif selection == 3:
-            update_application_status()
+            update_applications()
 
         elif selection == 4:
             archive_application()
@@ -483,7 +471,7 @@ def main():
             break
 
         elif selection == 9:
-            edit_application()
+            break
 
 
 if __name__ == "__main__":

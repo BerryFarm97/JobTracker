@@ -137,7 +137,10 @@ def edit_application_values(application_id, selected_column, updated_application
                 WHERE id = ?""",
                 (updated_application_value, application_id)
                 )
+    
+    conn.commit()
     conn.close()
+    
     return True
 
 def get_archived(sort_choice):
