@@ -117,6 +117,29 @@ def archived_status(application_id):
     conn.close()
 
 
+def edit_application_values(application_id, selected_column, updated_application_value):
+    conn = initialize_conn()
+    
+    cur = initialize_cur(conn)
+    
+    trusted_columns = [
+        'company_name',
+        'job_title',
+        'salary_range',
+        'location',
+        'notes'        
+    ]
+    if selected_column not in trusted_columns:
+        return False
+    
+    cur.execute(f"""UPDATE applications
+                SET {selected_column} = ?
+                WHERE id = ?""",
+                (updated_application_value, application_id)
+                )
+    conn.close()
+    return True
+
 def get_archived(sort_choice):
     conn = initialize_conn()
     conn.row_factory = sqlite3.Row
