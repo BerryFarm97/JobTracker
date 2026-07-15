@@ -11,8 +11,13 @@ from database import (
     return_filtered_apps,
     get_search_results,
     edit_application_values,
+    delete_archived_app,
 )
 
+ALLOWABLE_PREFIXES = (
+    "http://",
+    "https://",
+)
 # This project should keep track of jobs I have applied to.
 # Company name, date applied, if a response was given (interview, offer, declined, ignored, or if I retract my application)
 # any notes ive made, salary range, job title etc.
@@ -55,12 +60,40 @@ def get_menu_choice():
 
 
 def create_application():
+    adding_url = True
+
     company_name = input("Company name: ")
     job_title = input("Job Title: ")
     salary_range = input("Salary Range: ")
     location = input("Job Location(onsite,work from home, hybrid): ")
     notes = input("Any notes?: ")
     status = "Applied"
+
+    while adding_url:
+        add_url = (
+            input("Would you like to add a url for this application?(y/n): ")
+            .strip()
+            .lower()
+        )
+        if add_url in ("y", "yes"):
+            while True:
+                url = input("Application URL: ").strip()
+                if url.startswith(ALLOWABLE_PREFIXES):
+                    adding_url = False
+                    break
+                else:
+                    print(
+                        "Not a valid url. Please enter a url the starts with http or https."
+                    )
+                    continue
+
+        elif add_url in ("n", "no"):
+            url = ""
+            adding_url = False
+            break
+        else:
+            print("Please enter y or n. Try again.")
+            continue
 
     application = {
         "company_name": company_name,
@@ -70,6 +103,7 @@ def create_application():
         "application_date": str(date.today()),
         "notes": notes,
         "status": status,
+        "url": url,
         "archived": 0,
     }
 
@@ -89,23 +123,21 @@ def view_applications():
         print(f"  Job Title: {app['job_title'].title()}")
         print(f"  Salary Range: {app['salary_range']}")
         print(f"  Location: {app['location'].title()}")
-        print(f"  Date Applied: {app['application_date'].title()}")
+        print(f"  Date Applied: {app['application_date']}")
         print(f"  Status: {app['status'].title()}")
-        print(f"  Notes: {app['notes'].title()}")
+        print(f"  Notes: {app['notes']}")
+        print(f"   Url: {app['url']}")
         print("----------------------------")
 
 
 def update_applications():
-    changeable_params = [
-        "Application Details",
-        "Application Status"
-    ]
+    changeable_params = ["Application Details", "Application Status"]
     while True:
         for num, param in enumerate(changeable_params, start=1):
             print(f"{num}. {param}")
         try:
-            choice = int(input("Which would you like to update?: ")) 
-                
+            choice = int(input("Which would you like to update?: "))
+
             if 0 < choice <= len(changeable_params):
                 if choice == 1:
                     edit_application()
@@ -119,8 +151,8 @@ def update_applications():
         except ValueError:
             print("Please only enter numbers. Try again.")
             continue
-        
-        
+
+
 def update_application_status():
     update_options = [
         "Applied",
@@ -175,6 +207,7 @@ def update_application_status():
             print("Not a valid option. Please try again.")
             continue
 
+
 def edit_application():
     editing = True
 
@@ -184,6 +217,7 @@ def edit_application():
         "Salary Range": "salary_range",
         "Location": "location",
         "Notes": "notes",
+        "Url": "url",
     }
 
     editable_keys = list(editable_options.keys())
@@ -213,9 +247,7 @@ def edit_application():
             except ValueError:
                 print("Invalid option. Please try again.")
 
-
         edit_helper(editable_keys, editable_options, app_selected)
-
 
         while True:
             edit_another = (
@@ -255,8 +287,17 @@ def edit_helper(editable_keys, editable_options, app_selected):
         while True:
             application_value = input("What is the updated info?: ").strip()
             if selected_column != "notes":
-                if len(application_value) == 0:
-                    print("This field cannot be empty. Please try again")
+                if selected_column != "url":
+                    if len(application_value) == 0:
+                        print("This field cannot be empty. Please try again")
+                        continue
+            if selected_column == "url":
+                if not application_value:
+                    break
+                elif not application_value.startswith(ALLOWABLE_PREFIXES):
+                    print(
+                        "Not a valid url. Please enter a url the starts with http or https."
+                    )
                     continue
             break
 
@@ -313,37 +354,195 @@ def archive_application():
 
 def view_archived_apps():
     sort_choice = get_sorting_choice()
-    archived_apps = get_archived(sort_choice)
-    if not archived_apps:
-        print("Nothing to view yet.")
-        return
+    user_choices = ["Restore", "Permanently Delete", "Exit"]
 
-    for num, app in enumerate(archived_apps, start=1):
-        print(f"{num}. {app['company_name']} | {app['job_title']} | {app['status']}\n")
     while True:
-        choice = (
-            input("Would you like to re-add a archived application?(y/n): ")
-            .strip()
-            .lower()
-        )
         try:
-            if choice in ("y", "yes"):
-                chose_app = int(input("Which app do you want to change?: "))
-                if 0 < chose_app <= len(archived_apps):
-                    app_to_restore = archived_apps[chose_app - 1]
-                    change_archive_status(app_to_restore["id"])
-                    print(
-                        f"Successfully restored your {app_to_restore['company_name']} application!"
-                    )
-                    return
-                else:
-                    print("Invalid option. Please try again")
-
-            elif choice in ("n", "no"):
+            archived_apps = get_archived(sort_choice)
+            if not archived_apps:
+                print("Nothing to view yet.")
                 return
+
+            for num, app in enumerate(archived_apps, start=1):
+                print(
+                    f"{num}. {app['company_name']} | {app['job_title']} | {app['status']}"
+                )
+
+            print("----------------------------------------")
+
+            for num, choice in enumerate(user_choices, start=1):
+                print(f"{num}. {choice}")
+
+            user_choice = int(input("What would you like to do?: "))
+
+            if user_choice == 1:
+                while True:
+                    refreshed_apps = get_archived(sort_choice)
+                    if not refreshed_apps:
+                        print("No more archived applications.")
+                        return
+
+                    restore = restore_archived_helper(refreshed_apps, sort_choice)
+
+                    if not restore:
+                        return
+                    while True:
+                        restore_again_choice = (
+                            input(
+                                "Would you like to restore another application?(y/n): "
+                            )
+                            .strip()
+                            .lower()
+                        )
+                        if restore_again_choice in ("y", "yes"):
+                            break
+
+                        elif restore_again_choice in ("n", "no"):
+                            print("Returning to the main menu.")
+                            time.sleep(1)
+                            return
+
+                        else:
+                            print("Invalid option. Please try again.")
+
+            elif user_choice == 2:
+                while True:
+                    refreshed_apps = get_archived(sort_choice)
+                    if not refreshed_apps:
+                        print("No more archived applications.")
+                        return
+
+                    delete = delete_archived_helper(refreshed_apps, sort_choice)
+
+                    if not delete:
+                        return
+                    while True:
+                        delete_again_choice = (
+                            input(
+                                "Would you like to delete another application?(y/n): "
+                            )
+                            .strip()
+                            .lower()
+                        )
+
+                        if delete_again_choice in ("y", "yes"):
+                            break
+
+                        elif delete_again_choice in ("n", "no"):
+                            print("Returning to the main menu.")
+                            time.sleep(1)
+                            return
+
+                        else:
+                            print("Invalid option. Please try again.")
+
+            elif user_choice == 3:
+                print("Returning to the main menu.")
+                time.sleep(1)
+                return
+
             else:
                 print("Invalid option. Please try again.")
                 continue
+        except ValueError:
+            print("Please enter a valid number.")
+
+
+def delete_archived_helper(archived_apps, sort_choice):
+    while True:
+        try:
+            if not archived_apps:
+                print("Nothing to do here....")
+                time.sleep(0.5)
+                print("Returning to choice menu.")
+                time.sleep(0.5)
+                return False
+
+            for num, app in enumerate(archived_apps, start=1):
+                print(
+                    f"{num}. {app['company_name']} | {app['job_title']} | {app['status']}\n"
+                )
+
+            user_choice = int(
+                input("Which app would you like to permanently remove?: ")
+            )
+
+        except ValueError:
+            print("Invalid option. Please try again.")
+            continue
+
+        if 0 < user_choice <= len(archived_apps):
+            selected_application = archived_apps[user_choice - 1]
+            while True:
+                user_confirm = (
+                    input(
+                        f"Are you sure you want to permanently delete {selected_application['company_name']}?(y/n): "
+                    )
+                    .strip()
+                    .lower()
+                )
+
+                if user_confirm in ("y", "yes"):
+                    perm_deleted = delete_archived_app(selected_application["id"])
+                    if not perm_deleted:
+                        print(
+                            f"Unable to delete {selected_application['company_name']}. Please re-check the information and try again."
+                        )
+                        break
+
+                    print(
+                        f"Successfully deleted {selected_application['company_name']}."
+                    )
+                    has_apps = get_archived(sort_choice)
+                    if not has_apps:
+                        return False
+                    else:
+                        return True
+
+                elif user_confirm in ("n", "no"):
+                    return False
+
+                else:
+                    print("Invalid option. Please enter y or n.")
+                    continue
+
+        else:
+            print("Invalid selection. Please try again.")
+            continue
+
+
+def restore_archived_helper(archived_apps, sort_choice):
+    while True:
+        if not archived_apps:
+            print("Nothing to do here....")
+            time.sleep(0.5)
+            print("Returning to choice menu.")
+            time.sleep(0.5)
+            return False
+
+        for num, app in enumerate(archived_apps, start=1):
+            print(
+                f"{num}. {app['company_name']} | {app['job_title']} | {app['status']}\n"
+            )
+
+        try:
+            chose_app = int(input("Which application would you like to restore?: "))
+
+            if 0 < chose_app <= len(archived_apps):
+                app_to_restore = archived_apps[chose_app - 1]
+                change_archive_status(app_to_restore["id"])
+                print(
+                    f"Successfully restored your {app_to_restore['company_name']} application!"
+                )
+                has_apps = get_archived(sort_choice)
+                if not has_apps:
+                    return False
+                else:
+                    return True
+            else:
+                print("Invalid option. Please try again")
+                continue
+
         except ValueError:
             print("Invalid option. Please try again.")
             continue
