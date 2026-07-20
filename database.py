@@ -425,3 +425,69 @@ def delete_archived_app(app_id):
     finally:
         if conn is not None:
             conn.close()
+
+
+def get_csv_data(filtered_type):
+    conn = None
+
+    try:
+        conn = initialize_conn()
+        conn.row_factory = sqlite3.Row
+
+        cur = initialize_cur(conn)
+        if filtered_type == "active":
+            cur.execute("""
+                SELECT company_name AS "Company Name",
+                job_title AS "Job Title", salary_range AS "Salary Range",
+                location AS "Location", notes AS "Notes",
+                status AS "Status", application_date AS "Application Date",
+                url AS "URL",
+                CASE
+                    WHEN archived = 1 THEN 'Yes'
+                    ELSE 'No'
+                END AS "Archived"
+                FROM applications
+                WHERE archived = 0
+                """)
+
+        elif filtered_type == "archived":
+            cur.execute("""
+                SELECT company_name AS "Company Name",
+                job_title AS "Job Title", salary_range AS "Salary Range",
+                location AS "Location", notes AS "Notes",
+                status AS "Status", application_date AS "Application Date",
+                url AS "URL",
+                CASE
+                    WHEN archived = 1 THEN 'Yes'
+                    ELSE 'No'
+                END AS "Archived"
+                FROM applications
+                WHERE archived = 1
+                """)
+
+        elif filtered_type == "all":
+            cur.execute("""
+                SELECT company_name AS "Company Name",
+                job_title AS "Job Title", salary_range AS "Salary Range",
+                location AS "Location", notes AS "Notes",
+                status AS "Status", application_date AS "Application Date",
+                url AS "URL",
+                CASE
+                    WHEN archived = 1 THEN 'Yes'
+                    ELSE 'No'
+                END AS "Archived"
+                FROM applications
+                """)
+
+        else:
+            raise ValueError("Invalid CSV filter type")
+
+        csv_rows = cur.fetchall()
+        return csv_rows
+
+    except sqlite3.Error:
+        return None
+
+    finally:
+        if conn is not None:
+            conn.close()
