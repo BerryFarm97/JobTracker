@@ -2,24 +2,35 @@ import sqlite3
 
 
 def initialize_database():
-    conn = sqlite3.connect("job_tracker.db")
+    conn = None
 
-    cur = conn.cursor()
+    try:
+        conn = sqlite3.connect("job_tracker.db")
 
-    cur.execute("""CREATE TABLE IF NOT EXISTS applications(
-        id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        company_name TEXT, 
-        job_title TEXT, 
-        salary_range TEXT, 
-        location TEXT, 
-        notes TEXT, 
-        status TEXT,
-        application_date TEXT,
-        url TEXT, 
-        archived INTEGER NOT NULL DEFAULT 0)""")
+        cur = conn.cursor()
 
-    conn.commit()
-    conn.close()
+        cur.execute("""CREATE TABLE IF NOT EXISTS applications(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_name TEXT,
+            job_title TEXT,
+            salary_range TEXT,
+            location TEXT,
+            notes TEXT,
+            status TEXT,
+            application_date TEXT,
+            url TEXT,
+            archived INTEGER NOT NULL DEFAULT 0)""")
+
+        conn.commit()
+        return True
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def initialize_conn():
@@ -32,251 +43,385 @@ def initialize_cur(conn):
 
 
 def add_application(application):
-    conn = initialize_conn()
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
 
-    cur.execute(
-        """INSERT INTO applications
-    (company_name, job_title, salary_range, location, notes, status, application_date, url, archived)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            application["company_name"],
-            application["job_title"],
-            application["salary_range"],
-            application["location"],
-            application["notes"],
-            application["status"],
-            application["application_date"],
-            application["url"],
-            application["archived"],
-        ),
-    )
+        cur = initialize_cur(conn)
 
-    conn.commit()
-    conn.close()
+        cur.execute(
+            """INSERT INTO applications
+        (company_name, job_title, salary_range, location, notes, status, application_date, url, archived)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                application["company_name"],
+                application["job_title"],
+                application["salary_range"],
+                application["location"],
+                application["notes"],
+                application["status"],
+                application["application_date"],
+                application["url"],
+                application["archived"],
+            ),
+        )
+
+        if cur.rowcount == 1:
+            conn.commit()
+            return True
+        else:
+            conn.rollback()
+            return False
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        return False
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def get_active_applications(sort_choice):
-    conn = initialize_conn()
-    conn.row_factory = sqlite3.Row
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
+        conn.row_factory = sqlite3.Row
 
-    sort_options = {
-        "Newest": "application_date DESC",
-        "Oldest": "application_date ASC",
-        "Company Name": "company_name ASC",
-        "Application Status": "status ASC",
-    }
+        cur = initialize_cur(conn)
 
-    order_by = sort_options[sort_choice]
+        sort_options = {
+            "Newest": "application_date DESC",
+            "Oldest": "application_date ASC",
+            "Company Name": "company_name ASC",
+            "Application Status": "status ASC",
+        }
 
-    cur.execute(f"""SELECT * 
-                FROM applications 
-                WHERE archived = 0
-                ORDER BY {order_by}""")
-    applications = cur.fetchall()
+        order_by = sort_options[sort_choice]
 
-    conn.close()
+        cur.execute(f"""SELECT *
+                    FROM applications
+                    WHERE archived = 0
+                    ORDER BY {order_by}""")
+        applications = cur.fetchall()
 
-    return applications
+        if applications:
+            return applications
+
+        elif applications == []:
+            return []
+
+    except sqlite3.Error:
+        return None
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def update_status(application_id, new_status):
-    conn = initialize_conn()
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
 
-    cur.execute(
-        """UPDATE applications
-            SET status = ?
-            WHERE id = ?""",
-        (new_status, application_id),
-    )
+        conn = initialize_conn()
+        cur = initialize_cur(conn)
 
-    conn.commit()
-    conn.close()
+        cur.execute(
+            """UPDATE applications
+                SET status = ?
+                WHERE id = ?""",
+            (new_status, application_id),
+        )
+
+        if cur.rowcount == 1:
+            conn.commit()
+            return True
+
+        else:
+            conn.rollback()
+            return False
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        return False
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def archived_status(application_id):
-    conn = initialize_conn()
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
 
-    cur.execute(
-        """UPDATE applications
-            SET archived = 1
-            WHERE id = ?""",
-        (application_id,),
-    )
+        cur = initialize_cur(conn)
 
-    conn.commit()
-    conn.close()
+        cur.execute(
+            """UPDATE applications
+                SET archived = 1
+                WHERE id = ?""",
+            (application_id,),
+        )
+
+        if cur.rowcount == 1:
+            conn.commit()
+            return True
+        else:
+            conn.rollback()
+            return False
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        return False
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def edit_application_values(application_id, selected_column, updated_application_value):
-    conn = initialize_conn()
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
 
-    trusted_columns = [
-        "company_name",
-        "job_title",
-        "salary_range",
-        "location",
-        "notes",
-        "url",
-    ]
-    if selected_column not in trusted_columns:
-        conn.close()
+        cur = initialize_cur(conn)
+
+        trusted_columns = [
+            "company_name",
+            "job_title",
+            "salary_range",
+            "location",
+            "notes",
+            "url",
+        ]
+        if selected_column not in trusted_columns:
+            return False
+
+        cur.execute(
+            f"""UPDATE applications
+                    SET {selected_column} = ?
+                    WHERE id = ?""",
+            (updated_application_value, application_id),
+        )
+
+        if cur.rowcount == 1:
+            conn.commit()
+            return True
+        else:
+            conn.rollback()
+            return False
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
         return False
-
-    cur.execute(
-        f"""UPDATE applications
-                SET {selected_column} = ?
-                WHERE id = ?""",
-        (updated_application_value, application_id),
-    )
-
-    conn.commit()
-    conn.close()
-
-    return True
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def get_archived(sort_choice):
-    conn = initialize_conn()
-    conn.row_factory = sqlite3.Row
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
+        conn.row_factory = sqlite3.Row
 
-    sort_options = {
-        "Newest": "application_date DESC",
-        "Oldest": "application_date ASC",
-        "Company Name": "company_name ASC",
-        "Application Status": "status ASC",
-    }
+        cur = initialize_cur(conn)
 
-    order_by = sort_options[sort_choice]
+        sort_options = {
+            "Newest": "application_date DESC",
+            "Oldest": "application_date ASC",
+            "Company Name": "company_name ASC",
+            "Application Status": "status ASC",
+        }
 
-    cur.execute(f"""SELECT * 
-                FROM applications 
-                WHERE archived = 1
-                ORDER BY {order_by}""")
-    applications = cur.fetchall()
+        order_by = sort_options[sort_choice]
 
-    conn.close()
-    return applications
+        cur.execute(f"""SELECT *
+                    FROM applications
+                    WHERE archived = 1
+                    ORDER BY {order_by}""")
+        applications = cur.fetchall()
+
+        if applications:
+            return applications
+
+        elif applications == []:
+            return []
+
+    except sqlite3.Error:
+        return None
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def change_archive_status(application_id):
-    conn = initialize_conn()
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
 
-    cur.execute(
-        """UPDATE applications
-            SET archived = 0
-            WHERE id = ?""",
-        (application_id,),
-    )
+        cur = initialize_cur(conn)
 
-    conn.commit()
-    conn.close()
+        cur.execute(
+            """UPDATE applications
+                SET archived = 0
+                WHERE id = ?""",
+            (application_id,),
+        )
+
+        if cur.rowcount == 1:
+            conn.commit()
+            return True
+        else:
+            conn.rollback()
+            return False
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def return_filtered_apps(status, sort_choice):
-    conn = initialize_conn()
-    conn.row_factory = sqlite3.Row
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
+        conn.row_factory = sqlite3.Row
 
-    sort_options = {
-        "Newest": "application_date DESC",
-        "Oldest": "application_date ASC",
-        "Company Name": "company_name ASC",
-        "Application Status": "status ASC",
-    }
+        cur = initialize_cur(conn)
 
-    order_by = sort_options[sort_choice]
+        sort_options = {
+            "Newest": "application_date DESC",
+            "Oldest": "application_date ASC",
+            "Company Name": "company_name ASC",
+            "Application Status": "status ASC",
+        }
 
-    cur.execute(
-        f"""SELECT * 
-                FROM applications 
-                WHERE archived = 0 
-                AND 
-                status = ?
-                ORDER BY {order_by}""",
-        (status,),
-    )
-    filtered_apps = cur.fetchall()
+        order_by = sort_options[sort_choice]
 
-    conn.close()
-    return filtered_apps
+        cur.execute(
+            f"""SELECT *
+                    FROM applications
+                    WHERE archived = 0
+                    AND
+                    status = ?
+                    ORDER BY {order_by}""",
+            (status,),
+        )
+        filtered_apps = cur.fetchall()
+
+        if filtered_apps:
+            return filtered_apps
+
+        elif filtered_apps == []:
+            return []
+
+    except sqlite3.Error:
+        return None
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def get_search_results(keyword, sort_choice):
-    conn = initialize_conn()
-    conn.row_factory = sqlite3.Row
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
+        conn.row_factory = sqlite3.Row
 
-    sort_options = {
-        "Newest": "application_date DESC",
-        "Oldest": "application_date ASC",
-        "Company Name": "company_name ASC",
-        "Application Status": "status ASC",
-    }
+        cur = initialize_cur(conn)
 
-    order_by = sort_options[sort_choice]
+        sort_options = {
+            "Newest": "application_date DESC",
+            "Oldest": "application_date ASC",
+            "Company Name": "company_name ASC",
+            "Application Status": "status ASC",
+        }
 
-    search_pattern = f"%{keyword}%"
+        order_by = sort_options[sort_choice]
 
-    cur.execute(
-        f"""SELECT * 
-                FROM applications
-                WHERE archived = 0 
-                AND (
-                company_name LIKE ?
-                OR job_title LIKE ?
-                OR salary_range LIKE ?
-                OR location LIKE ?
-                OR notes LIKE ?)
-                ORDER BY {order_by}""",
-        (
-            search_pattern,
-            search_pattern,
-            search_pattern,
-            search_pattern,
-            search_pattern,
-        ),
-    )
-    search_results = cur.fetchall()
+        search_pattern = f"%{keyword}%"
 
-    conn.close()
-    return search_results
+        cur.execute(
+            f"""SELECT *
+                    FROM applications
+                    WHERE archived = 0
+                    AND (
+                    company_name LIKE ?
+                    OR job_title LIKE ?
+                    OR salary_range LIKE ?
+                    OR location LIKE ?
+                    OR notes LIKE ?)
+                    ORDER BY {order_by}""",
+            (
+                search_pattern,
+                search_pattern,
+                search_pattern,
+                search_pattern,
+                search_pattern,
+            ),
+        )
+        search_results = cur.fetchall()
+
+        if search_results:
+            return search_results
+
+        elif search_results == []:
+            return []
+
+    except sqlite3.Error:
+        return None
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def delete_archived_app(app_id):
-    conn = initialize_conn()
+    conn = None
 
-    cur = initialize_cur(conn)
+    try:
+        conn = initialize_conn()
 
-    cur.execute(
-        """DELETE FROM applications
-                 WHERE archived = 1
-                 AND id = ?""",
-        (app_id,),
-    )
+        cur = initialize_cur(conn)
 
-    if cur.rowcount == 1:
-        row_deleted_successfully = True
-    
-    elif cur.rowcount == 0:
-        row_deleted_successfully = False
-    
-    conn.commit()
-    conn.close()
+        cur.execute(
+            """DELETE FROM applications
+                    WHERE archived = 1
+                    AND id = ?""",
+            (app_id,),
+        )
 
-    return row_deleted_successfully
+        if cur.rowcount == 1:
+            conn.commit()
+            return True
+        else:
+            conn.rollback()
+            return False
+
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
