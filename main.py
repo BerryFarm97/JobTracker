@@ -1,5 +1,7 @@
 from datetime import date
 from urllib.parse import urlsplit
+from csv_exporter import convert_db_csv
+from pathlib import Path
 from database import (
     initialize_database,
     add_application,
@@ -12,6 +14,7 @@ from database import (
     get_search_results,
     edit_application_values,
     delete_archived_app,
+    get_csv_data,
 )
 
 # This project should keep track of jobs I have applied to.
@@ -115,12 +118,14 @@ def get_menu_choice():
         "View Archived Applications",
         "Filter Applications By Status",
         "Search for applications",
+        "Convert Table to CSV",
         "Exit",
     ]
 
     while True:
         for num, option in enumerate(menu_options, start=1):
             print(f"{num}. {option}")
+
         try:
             choice = int(input("What would you like to do?: "))
             if 0 < choice <= len(menu_options):
@@ -867,11 +872,84 @@ def get_sorting_choice():
             print("\nInvalid option. Please try again.")
 
 
+def csv_conversion():
+    sub_menu_options = {
+        "Active applications only": "active",
+        "Archived applications only": "archived",
+        "All applications": "all",
+    }
+
+    for num, key in enumerate(sub_menu_options, start=1):
+        print(f"{num}. {key}")
+
+    while True:
+        try:
+            user_choice = int(input("What applications would you like to convert?: "))
+            if 0 < user_choice <= len(sub_menu_options):
+                selected_key = list(sub_menu_options.keys())[user_choice - 1]
+                sub_menu_selection = sub_menu_options[selected_key]
+                break
+            else:
+                print("Invalid options please enter a number between 1 and 3.")
+        except ValueError:
+            print("Please only enter a number between 1 and 3.")
+
+    csv_data = get_csv_data(sub_menu_selection)
+
+    if csv_data is None:
+        print("Unable to retrieve application data for export. Please try again later.")
+        return
+
+    if csv_data == []:
+        print("\nThere are no applications to export.\n")
+        return
+
+    final_path = get_export_path()
+
+    csv_dictionaries = [dict(row) for row in csv_data]
+    converted = convert_db_csv(csv_dictionaries, final_path)
+
+    if not converted:
+        print("\nUnable to export data. Please try again later.\n")
+
+    else:
+        print(f"\nCSV file successfully saved at {final_path}.\n")
+
+
+def get_export_path():
+    filename = Path("applications_table.csv")
+
+    folder = input(
+        "\nWhere should the file be saved? If left empty CSV will be saved in project folder: "
+    ).strip()
+
+    if folder == "":
+        folder = Path(__file__).resolve().parent
+
+    folder_formatted = Path(folder)
+
+    candidate_path = folder_formatted / filename
+
+    counter = 1
+
+    while candidate_path.exists():
+        new_name = f"{filename.stem}({counter}){filename.suffix}"
+        candidate_path = folder_formatted / new_name
+
+        if not candidate_path.exists():
+            break
+
+        else:
+            counter += 1
+
+    return candidate_path
+
+
 def main():
     db_start = initialize_database()
 
     if not db_start:
-        print("Database failed to initialize. Please try again.")
+        print("\nDatabase failed to initialize. Please try again.\n")
         return
 
     while True:
@@ -902,6 +980,9 @@ def main():
             search_for_applications()
 
         elif selection == 8:
+            csv_conversion()
+
+        elif selection == 9:
             break
 
 
