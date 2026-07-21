@@ -1,5 +1,12 @@
 import sqlite3
 
+SORT_OPTIONS = {
+    "Newest": "application_date DESC",
+    "Oldest": "application_date ASC",
+    "Company Name": "company_name ASC",
+    "Application Status": "status ASC",
+}
+
 
 def initialize_database():
     conn = None
@@ -93,14 +100,7 @@ def get_active_applications(sort_choice):
 
         cur = initialize_cur(conn)
 
-        sort_options = {
-            "Newest": "application_date DESC",
-            "Oldest": "application_date ASC",
-            "Company Name": "company_name ASC",
-            "Application Status": "status ASC",
-        }
-
-        order_by = sort_options[sort_choice]
+        order_by = SORT_OPTIONS[sort_choice]
 
         cur.execute(f"""SELECT *
                     FROM applications
@@ -108,11 +108,7 @@ def get_active_applications(sort_choice):
                     ORDER BY {order_by}""")
         applications = cur.fetchall()
 
-        if applications:
-            return applications
-
-        elif applications == []:
-            return []
+        return applications
 
     except sqlite3.Error:
         return None
@@ -155,7 +151,7 @@ def update_status(application_id, new_status):
             conn.close()
 
 
-def archived_status(application_id):
+def archive_application_by_id(application_id):
     conn = None
 
     try:
@@ -238,14 +234,7 @@ def get_archived(sort_choice):
 
         cur = initialize_cur(conn)
 
-        sort_options = {
-            "Newest": "application_date DESC",
-            "Oldest": "application_date ASC",
-            "Company Name": "company_name ASC",
-            "Application Status": "status ASC",
-        }
-
-        order_by = sort_options[sort_choice]
+        order_by = SORT_OPTIONS[sort_choice]
 
         cur.execute(f"""SELECT *
                     FROM applications
@@ -253,11 +242,7 @@ def get_archived(sort_choice):
                     ORDER BY {order_by}""")
         applications = cur.fetchall()
 
-        if applications:
-            return applications
-
-        elif applications == []:
-            return []
+        return applications
 
     except sqlite3.Error:
         return None
@@ -267,7 +252,7 @@ def get_archived(sort_choice):
             conn.close()
 
 
-def change_archive_status(application_id):
+def restore_application_by_id(application_id):
     conn = None
 
     try:
@@ -298,7 +283,7 @@ def change_archive_status(application_id):
             conn.close()
 
 
-def return_filtered_apps(status, sort_choice):
+def get_filtered_applications(status, sort_choice):
     conn = None
 
     try:
@@ -307,14 +292,7 @@ def return_filtered_apps(status, sort_choice):
 
         cur = initialize_cur(conn)
 
-        sort_options = {
-            "Newest": "application_date DESC",
-            "Oldest": "application_date ASC",
-            "Company Name": "company_name ASC",
-            "Application Status": "status ASC",
-        }
-
-        order_by = sort_options[sort_choice]
+        order_by = SORT_OPTIONS[sort_choice]
 
         cur.execute(
             f"""SELECT *
@@ -327,11 +305,7 @@ def return_filtered_apps(status, sort_choice):
         )
         filtered_apps = cur.fetchall()
 
-        if filtered_apps:
-            return filtered_apps
-
-        elif filtered_apps == []:
-            return []
+        return filtered_apps
 
     except sqlite3.Error:
         return None
@@ -350,14 +324,7 @@ def get_search_results(keyword, sort_choice):
 
         cur = initialize_cur(conn)
 
-        sort_options = {
-            "Newest": "application_date DESC",
-            "Oldest": "application_date ASC",
-            "Company Name": "company_name ASC",
-            "Application Status": "status ASC",
-        }
-
-        order_by = sort_options[sort_choice]
+        order_by = SORT_OPTIONS[sort_choice]
 
         search_pattern = f"%{keyword}%"
 
@@ -382,11 +349,7 @@ def get_search_results(keyword, sort_choice):
         )
         search_results = cur.fetchall()
 
-        if search_results:
-            return search_results
-
-        elif search_results == []:
-            return []
+        return search_results
 
     except sqlite3.Error:
         return None
