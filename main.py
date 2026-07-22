@@ -17,20 +17,6 @@ from database import (
     get_csv_data,
 )
 
-# This project should keep track of jobs I have applied to.
-# Company name, date applied, if a response was given (interview, offer, declined, ignored, or if I retract my application)
-# any notes ive made, salary range, job title etc.
-
-# This app should allow the user to enter a job applied to
-# User should be able to view all applications
-# User should be able to remove/archive applications
-# User should be able to update application info
-# User should be able to exit the program at any time by typing "exit" or pressing a specific number
-# (
-# When adding a job the user should be prompted to enter the company name, job title, salary range, and on-site or work from home.
-# The program should then grab the current date and time (based on the users timezone) and store that with the Add application
-# )
-
 ALLOWABLE_SCHEMES = (
     "http",
     "https",

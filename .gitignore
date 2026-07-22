@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 job_tracker.db
 .vscode/
+applications_table*.csv
+.pytest_cache/
